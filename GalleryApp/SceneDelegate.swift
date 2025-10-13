@@ -13,10 +13,36 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
-        // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
-        // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
-        guard let _ = (scene as? UIWindowScene) else { return }
+        guard let windowScene = (scene as? UIWindowScene) else { return }
+        
+        window = UIWindow(windowScene: windowScene)
+        
+        // Создаем launch screen программно
+        let launchViewController = UIViewController()
+        launchViewController.view.backgroundColor = .systemBackground
+        
+        // Добавляем логотип или название приложения
+        let titleLabel = UILabel()
+        titleLabel.text = "Gallery App"
+        titleLabel.font = UIFont.systemFont(ofSize: 24, weight: .bold)
+        titleLabel.textColor = .label
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        launchViewController.view.addSubview(titleLabel)
+        
+        NSLayoutConstraint.activate([
+            titleLabel.centerXAnchor.constraint(equalTo: launchViewController.view.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: launchViewController.view.centerYAnchor)
+        ])
+        
+        window?.rootViewController = launchViewController
+        window?.makeKeyAndVisible()
+        
+        // Переходим к основному экрану через небольшую задержку
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let galleryViewController = GalleryViewController()
+            let navigationController = UINavigationController(rootViewController: galleryViewController)
+            self.window?.rootViewController = navigationController
+        }
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
