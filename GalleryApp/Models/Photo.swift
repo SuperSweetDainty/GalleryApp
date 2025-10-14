@@ -1,10 +1,3 @@
-//
-//  Photo.swift
-//  GalleryApp
-//
-//  Created by Даниил Лапутин on 8.10.25.
-//
-
 import Foundation
 
 struct Photo: Codable, Equatable {

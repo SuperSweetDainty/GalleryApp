@@ -1,10 +1,3 @@
-//
-//  FavoritesService.swift
-//  GalleryApp
-//
-//  Created by Даниил Лапутин on 8.10.25.
-//
-
 import Foundation
 
 protocol FavoritesServiceProtocol {

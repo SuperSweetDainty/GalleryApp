@@ -1,13 +1,6 @@
-//
-//  GalleryViewController.swift
-//  GalleryApp
-//
-//  Created by Даниил Лапутин on 8.10.25.
-//
-
 import UIKit
 
-class GalleryViewController: UIViewController {
+class GalleryViewController: UIViewController, PhotoCellDelegate {
     
     // MARK: - Properties
     private var presenter: GalleryPresenterProtocol!
@@ -22,7 +15,7 @@ class GalleryViewController: UIViewController {
         
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.backgroundColor = .systemBackground
+        collectionView.backgroundColor = UIColor(resource: .white)
         collectionView.delegate = self
         collectionView.dataSource = self
         collectionView.register(PhotoCell.self, forCellWithReuseIdentifier: PhotoCell.identifier)
@@ -50,10 +43,16 @@ class GalleryViewController: UIViewController {
         presenter.loadPhotos()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // Обновляем коллекцию при возврате из детального экрана
+        collectionView.reloadData()
+    }
+    
     // MARK: - Setup
     private func setupUI() {
         title = "Галерея"
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = UIColor(resource: .white)
         
         view.addSubview(collectionView)
         view.addSubview(loadingIndicator)
@@ -125,6 +124,7 @@ extension GalleryViewController: UICollectionViewDataSource {
         }
         
         let photo = photos[indexPath.item]
+        cell.delegate = self
         cell.configure(with: photo, isFavorite: presenter.isFavorite(photo))
         return cell
     }
@@ -154,5 +154,20 @@ extension GalleryViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         let width = (collectionView.frame.width - 4) / 3
         return CGSize(width: width, height: width)
+    }
+}
+
+// MARK: - PhotoCellDelegate
+extension GalleryViewController {
+    func photoCell(_ cell: PhotoCell, didTapFavoriteButton photo: Photo) {
+        presenter.toggleFavorite(for: photo)
+        // Обновляем UI для всех ячеек с этой фотографией
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            if let visibleCell = collectionView.cellForItem(at: indexPath) as? PhotoCell,
+               let cellPhoto = visibleCell.photo,
+               cellPhoto.id == photo.id {
+                visibleCell.updateFavoriteStatus(isFavorite: presenter.isFavorite(photo))
+            }
+        }
     }
 }

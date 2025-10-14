@@ -1,10 +1,3 @@
-//
-//  PhotoDetailPresenter.swift
-//  GalleryApp
-//
-//  Created by Даниил Лапутин on 8.10.25.
-//
-
 import Foundation
 import UIKit
 
@@ -20,6 +13,7 @@ protocol PhotoDetailPresenterProtocol {
     func loadPhoto()
     func toggleFavorite()
     func getCurrentPhoto() -> Photo?
+    func isFavorite(_ photo: Photo) -> Bool
 }
 
 class PhotoDetailPresenter: PhotoDetailPresenterProtocol {
@@ -54,5 +48,9 @@ class PhotoDetailPresenter: PhotoDetailPresenterProtocol {
     
     func getCurrentPhoto() -> Photo? {
         return photo
+    }
+    
+    func isFavorite(_ photo: Photo) -> Bool {
+        return favoritesService.isFavorite(photo)
     }
 }
