@@ -2,6 +2,11 @@ import UIKit
 
 class PhotoDetailViewController: UIViewController {
     
+    // MARK: - Enums
+    private enum AnimationDirection {
+        case left, right
+    }
+    
     // MARK: - Properties
     private var presenter: PhotoDetailPresenterProtocol!
     private let photo: Photo
@@ -129,13 +134,11 @@ class PhotoDetailViewController: UIViewController {
         super.viewWillTransition(to: size, with: coordinator)
         
         coordinator.animate(alongsideTransition: { _ in
-            // Обновляем высоту изображения при повороте экрана
             self.updateImageHeight()
         })
     }
     
     private func updateImageHeight() {
-        // Находим констрейнт высоты imageScrollView и обновляем его
         for constraint in imageScrollView.constraints {
             if constraint.firstAttribute == .height {
                 constraint.constant = calculateOptimalImageHeight()
@@ -143,31 +146,23 @@ class PhotoDetailViewController: UIViewController {
             }
         }
         
-        // Обновляем layout
         view.layoutIfNeeded()
     }
     
     // MARK: - Setup
     private func setupNavigationBar() {
-        // Убираем текст из title
         title = ""
-        
-        // Настраиваем черный цвет для кнопки "Назад"
         navigationController?.navigationBar.tintColor = UIColor(resource: .black)
         
-        // Настраиваем кнопку лайка с системными иконками
         favoriteButton.setImage(UIImage(systemName: "heart"), for: .normal)
         favoriteButton.setImage(UIImage(systemName: "heart.fill"), for: .selected)
         favoriteButton.tintColor = .systemRed
         
-        // Добавляем кнопку лайка в навигационный бар справа
         let favoriteBarButton = UIBarButtonItem(customView: favoriteButton)
         navigationItem.rightBarButtonItem = favoriteBarButton
         
-        // Устанавливаем размеры кнопки
         favoriteButton.widthAnchor.constraint(equalToConstant: 44).isActive = true
         favoriteButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        
     }
     
     private func setupUI() {
@@ -180,13 +175,11 @@ class PhotoDetailViewController: UIViewController {
         imageScrollView.addSubview(loadingIndicator)
         imageScrollView.addSubview(animatedHeartImageView)
         
-        // Добавляем двойное нажатие для лайка
         let doubleTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap))
         doubleTapGesture.numberOfTapsRequired = 2
         imageView.addGestureRecognizer(doubleTapGesture)
         imageView.isUserInteractionEnabled = true
         
-        // Добавляем свайпы для навигации между изображениями
         let leftSwipeGesture = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe))
         leftSwipeGesture.direction = .left
         view.addGestureRecognizer(leftSwipeGesture)
@@ -200,26 +193,22 @@ class PhotoDetailViewController: UIViewController {
         infoView.addSubview(descriptionLabel)
         
         NSLayoutConstraint.activate([
-            // Main scroll view
             mainScrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             mainScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             mainScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             mainScrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
-            // Content view
             contentView.topAnchor.constraint(equalTo: mainScrollView.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: mainScrollView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: mainScrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: mainScrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: mainScrollView.widthAnchor),
             
-            // Image scroll view
             imageScrollView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
             imageScrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             imageScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             imageScrollView.heightAnchor.constraint(equalToConstant: calculateOptimalImageHeight()),
             
-            // Image view
             imageView.topAnchor.constraint(equalTo: imageScrollView.topAnchor),
             imageView.leadingAnchor.constraint(equalTo: imageScrollView.leadingAnchor),
             imageView.trailingAnchor.constraint(equalTo: imageScrollView.trailingAnchor),
@@ -227,29 +216,23 @@ class PhotoDetailViewController: UIViewController {
             imageView.widthAnchor.constraint(equalTo: imageScrollView.widthAnchor),
             imageView.heightAnchor.constraint(equalTo: imageScrollView.heightAnchor),
             
-            // Info view
             infoView.topAnchor.constraint(equalTo: imageScrollView.bottomAnchor, constant: 16),
             infoView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             infoView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             infoView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
             
-            // Author label
             authorLabel.topAnchor.constraint(equalTo: infoView.topAnchor, constant: 16),
             authorLabel.leadingAnchor.constraint(equalTo: infoView.leadingAnchor, constant: 16),
             authorLabel.trailingAnchor.constraint(equalTo: infoView.trailingAnchor, constant: -16),
             
-            // Description label
             descriptionLabel.topAnchor.constraint(equalTo: authorLabel.bottomAnchor, constant: 8),
             descriptionLabel.leadingAnchor.constraint(equalTo: infoView.leadingAnchor, constant: 16),
             descriptionLabel.trailingAnchor.constraint(equalTo: infoView.trailingAnchor, constant: -16),
             descriptionLabel.bottomAnchor.constraint(equalTo: infoView.bottomAnchor, constant: -16),
             
-            
-            // Loading indicator
             loadingIndicator.centerXAnchor.constraint(equalTo: imageScrollView.centerXAnchor),
             loadingIndicator.centerYAnchor.constraint(equalTo: imageScrollView.centerYAnchor),
             
-            // Animated heart
             animatedHeartImageView.centerXAnchor.constraint(equalTo: imageScrollView.centerXAnchor),
             animatedHeartImageView.centerYAnchor.constraint(equalTo: imageScrollView.centerYAnchor),
             animatedHeartImageView.widthAnchor.constraint(equalToConstant: 80),
@@ -271,10 +254,8 @@ class PhotoDetailViewController: UIViewController {
     @objc private func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
         switch gesture.direction {
         case .left:
-            // Свайп влево - следующее изображение
             navigateToNextPhoto()
         case .right:
-            // Свайп вправо - предыдущее изображение
             navigateToPreviousPhoto()
         default:
             break
@@ -289,8 +270,7 @@ class PhotoDetailViewController: UIViewController {
         
         currentPhotoIndex += 1
         let nextPhoto = photos[currentPhotoIndex]
-        updatePhotoDisplay(nextPhoto)
-        showSwipeMessage("Следующее фото")
+        animateToPhoto(nextPhoto, direction: .left)
     }
     
     private func navigateToPreviousPhoto() {
@@ -301,23 +281,18 @@ class PhotoDetailViewController: UIViewController {
         
         currentPhotoIndex -= 1
         let previousPhoto = photos[currentPhotoIndex]
-        updatePhotoDisplay(previousPhoto)
-        showSwipeMessage("Предыдущее фото")
+        animateToPhoto(previousPhoto, direction: .right)
     }
     
     private func updatePhotoDisplay(_ newPhoto: Photo) {
-        // Создаем новый presenter для нового изображения
         presenter = PhotoDetailPresenter(photo: newPhoto)
         presenter.view = self
         
-        // Обновляем информацию об изображении
         authorLabel.text = newPhoto.user.name
         descriptionLabel.text = newPhoto.description ?? newPhoto.altDescription ?? "Описание отсутствует"
         
-        // Обновляем кнопку избранного
         favoriteButton.isSelected = presenter.isFavorite(newPhoto)
         
-        // Загружаем новое изображение
         loadingIndicator.startAnimating()
         imageView.image = nil
         
@@ -329,8 +304,56 @@ class PhotoDetailViewController: UIViewController {
         }
     }
     
+    private func animateToPhoto(_ newPhoto: Photo, direction: AnimationDirection) {
+        let newPresenter = PhotoDetailPresenter(photo: newPhoto)
+        presenter = newPresenter
+        presenter.view = self
+        
+        authorLabel.text = newPhoto.user.name
+        descriptionLabel.text = newPhoto.description ?? newPhoto.altDescription ?? "Описание отсутствует"
+        
+        favoriteButton.isSelected = presenter.isFavorite(newPhoto)
+        
+        let transform: CGAffineTransform
+        let nextTransform: CGAffineTransform
+        
+        switch direction {
+        case .left:
+            transform = CGAffineTransform(translationX: -view.frame.width, y: 0)
+            nextTransform = CGAffineTransform(translationX: view.frame.width, y: 0)
+        case .right:
+            transform = CGAffineTransform(translationX: view.frame.width, y: 0)
+            nextTransform = CGAffineTransform(translationX: -view.frame.width, y: 0)
+        }
+        
+        imageView.transform = nextTransform
+        authorLabel.transform = nextTransform
+        descriptionLabel.transform = nextTransform
+        
+        loadingIndicator.startAnimating()
+        imageView.image = nil
+        
+        ImageCacheService.shared.loadImage(from: newPhoto.urls.regular) { [weak self] image in
+            DispatchQueue.main.async {
+                self?.loadingIndicator.stopAnimating()
+                self?.imageView.image = image
+            }
+        }
+        
+        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut, animations: {
+            self.imageView.transform = transform
+            self.authorLabel.transform = transform
+            self.descriptionLabel.transform = transform
+            
+            self.imageView.transform = .identity
+            self.authorLabel.transform = .identity
+            self.descriptionLabel.transform = .identity
+            
+        }) { _ in
+        }
+    }
+    
     private func showSwipeMessage(_ message: String) {
-        // Создаем временную метку для демонстрации свайпов
         let messageLabel = UILabel()
         messageLabel.text = message
         messageLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
@@ -340,15 +363,14 @@ class PhotoDetailViewController: UIViewController {
         messageLabel.layer.cornerRadius = 8
         messageLabel.clipsToBounds = true
         messageLabel.translatesAutoresizingMaskIntoConstraints = false
-        messageLabel.numberOfLines = 0 // Разрешаем многострочный текст
+        messageLabel.numberOfLines = 0
         messageLabel.lineBreakMode = .byWordWrapping
         
         view.addSubview(messageLabel)
         
-        // Рассчитываем размер текста для правильной ширины
         let maxWidth: CGFloat = 250
         let textSize = message.size(withAttributes: [.font: messageLabel.font!])
-        let labelWidth = min(textSize.width + 20, maxWidth) // Добавляем отступы
+        let labelWidth = min(textSize.width + 20, maxWidth)
         
         NSLayoutConstraint.activate([
             messageLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -357,7 +379,6 @@ class PhotoDetailViewController: UIViewController {
             messageLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 40)
         ])
         
-        // Анимация появления и исчезновения
         messageLabel.alpha = 0
         UIView.animate(withDuration: 0.3, animations: {
             messageLabel.alpha = 1
@@ -371,21 +392,18 @@ class PhotoDetailViewController: UIViewController {
     }
     
     private func showAnimatedHeart() {
-        // Устанавливаем правильную иконку сердца в зависимости от состояния
-        let isFavorite = presenter.isFavorite(photo)
+        guard let currentPhoto = presenter.getCurrentPhoto() else { return }
+        let isFavorite = presenter.isFavorite(currentPhoto)
         animatedHeartImageView.image = UIImage(systemName: isFavorite ? "heart.fill" : "heart")
         
-        // Сбрасываем анимацию
         animatedHeartImageView.layer.removeAllAnimations()
         animatedHeartImageView.alpha = 0
         animatedHeartImageView.transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
         
-        // Анимация появления
         UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.8, options: .curveEaseOut) {
             self.animatedHeartImageView.alpha = 1.0
             self.animatedHeartImageView.transform = CGAffineTransform(scaleX: 1.0, y: 1.0)
         } completion: { _ in
-            // Анимация исчезновения через секунду
             UIView.animate(withDuration: 0.3, delay: 0.7, options: .curveEaseIn) {
                 self.animatedHeartImageView.alpha = 0
                 self.animatedHeartImageView.transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
@@ -396,33 +414,28 @@ class PhotoDetailViewController: UIViewController {
     private func calculateOptimalImageHeight() -> CGFloat {
         let screenHeight = UIScreen.main.bounds.height
         let screenWidth = UIScreen.main.bounds.width
-        let availableWidth = screenWidth - 32 // Учитываем отступы (16 с каждой стороны)
+        let availableWidth = screenWidth - 32
         
-        // Базовый процент от высоты экрана в зависимости от размера устройства
         let baseHeightPercentage: CGFloat
         switch screenHeight {
-        case 0...667: // iPhone SE, 8, 7, 6s, 6
-            baseHeightPercentage = 0.75 // Увеличено с 60% до 75%
-        case 668...812: // iPhone X, XS, 11 Pro, 12 mini, 13 mini
-            baseHeightPercentage = 0.7 // Увеличено с 55% до 70%
-        case 813...926: // iPhone XR, XS Max, 11, 11 Pro Max, 12, 12 Pro, 13, 13 Pro, 14
-            baseHeightPercentage = 0.7 // Увеличено с 50% до 65%
-        case 927...1024: // iPhone 14 Plus, 15, 15 Plus
-            baseHeightPercentage = 0.7 // Увеличено с 45% до 60%
-        default: // iPhone Pro Max модели и планшеты
-            baseHeightPercentage = 0.55 // Увеличено с 40% до 55%
+        case 0...667:
+            baseHeightPercentage = 0.75
+        case 668...812:
+            baseHeightPercentage = 0.7
+        case 813...926:
+            baseHeightPercentage = 0.7
+        case 927...1024:
+            baseHeightPercentage = 0.7
+        default:
+            baseHeightPercentage = 0.55
         }
         
-        // Рассчитываем базовую высоту
         let baseHeight = screenHeight * baseHeightPercentage
         
-        // Если у нас есть информация о соотношении сторон изображения, используем её
         let photo = self.photo
         let aspectRatio = CGFloat(photo.width) / CGFloat(photo.height)
         let heightBasedOnWidth = availableWidth / aspectRatio
         
-        // Используем меньшую из высот (базовую или рассчитанную по соотношению сторон)
-        // но не меньше 200 и не больше 85% экрана (увеличено с 80%)
         let optimalHeight = min(baseHeight, heightBasedOnWidth)
         return max(200, min(optimalHeight, screenHeight * 0.85))
     }

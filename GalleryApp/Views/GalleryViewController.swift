@@ -45,7 +45,6 @@ class GalleryViewController: UIViewController, PhotoCellDelegate {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // Обновляем коллекцию при возврате из детального экрана
         collectionView.reloadData()
     }
     
@@ -161,7 +160,6 @@ extension GalleryViewController: UICollectionViewDelegateFlowLayout {
 extension GalleryViewController {
     func photoCell(_ cell: PhotoCell, didTapFavoriteButton photo: Photo) {
         presenter.toggleFavorite(for: photo)
-        // Обновляем UI для всех ячеек с этой фотографией
         for indexPath in collectionView.indexPathsForVisibleItems {
             if let visibleCell = collectionView.cellForItem(at: indexPath) as? PhotoCell,
                let cellPhoto = visibleCell.photo,
