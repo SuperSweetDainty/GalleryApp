@@ -6,7 +6,7 @@ protocol NetworkServiceProtocol {
 
 class NetworkService: NetworkServiceProtocol {
     private let baseURL = "https://api.unsplash.com"
-    private let accessKey = "elw8fVRTyxrax_u8IS7Qu_MDuicPoA88mOA0SqV_AlM"
+    private let accessKey = "YOUR_UNSPLASH_ACCESS_KEY"
     
     private lazy var session: URLSession = {
         let config = URLSessionConfiguration.default
