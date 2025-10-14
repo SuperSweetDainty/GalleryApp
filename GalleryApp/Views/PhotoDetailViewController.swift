@@ -5,6 +5,9 @@ class PhotoDetailViewController: UIViewController {
     // MARK: - Properties
     private var presenter: PhotoDetailPresenterProtocol!
     private let photo: Photo
+    private let photos: [Photo]
+    private let currentIndex: Int
+    private var currentPhotoIndex: Int
     
     // MARK: - UI Elements
     private lazy var mainScrollView: UIScrollView = {
@@ -95,8 +98,11 @@ class PhotoDetailViewController: UIViewController {
     }()
     
     // MARK: - Initialization
-    init(photo: Photo) {
+    init(photo: Photo, photos: [Photo], currentIndex: Int) {
         self.photo = photo
+        self.photos = photos
+        self.currentIndex = currentIndex
+        self.currentPhotoIndex = currentIndex
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -111,6 +117,12 @@ class PhotoDetailViewController: UIViewController {
         setupUI()
         setupPresenter()
         presenter.loadPhoto()
+    }
+    
+    // MARK: - Setup
+    private func setupPresenter() {
+        presenter = PhotoDetailPresenter(photo: photo)
+        presenter.view = self
     }
     
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -174,6 +186,15 @@ class PhotoDetailViewController: UIViewController {
         imageView.addGestureRecognizer(doubleTapGesture)
         imageView.isUserInteractionEnabled = true
         
+        // Добавляем свайпы для навигации между изображениями
+        let leftSwipeGesture = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe))
+        leftSwipeGesture.direction = .left
+        view.addGestureRecognizer(leftSwipeGesture)
+        
+        let rightSwipeGesture = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe))
+        rightSwipeGesture.direction = .right
+        view.addGestureRecognizer(rightSwipeGesture)
+        
         contentView.addSubview(infoView)
         infoView.addSubview(authorLabel)
         infoView.addSubview(descriptionLabel)
@@ -236,10 +257,6 @@ class PhotoDetailViewController: UIViewController {
         ])
     }
     
-    private func setupPresenter() {
-        presenter = PhotoDetailPresenter(photo: photo)
-        presenter.view = self
-    }
     
     // MARK: - Actions
     @objc private func favoriteButtonTapped() {
@@ -249,6 +266,108 @@ class PhotoDetailViewController: UIViewController {
     @objc private func handleDoubleTap() {
         presenter.toggleFavorite()
         showAnimatedHeart()
+    }
+    
+    @objc private func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
+        switch gesture.direction {
+        case .left:
+            // Свайп влево - следующее изображение
+            navigateToNextPhoto()
+        case .right:
+            // Свайп вправо - предыдущее изображение
+            navigateToPreviousPhoto()
+        default:
+            break
+        }
+    }
+    
+    private func navigateToNextPhoto() {
+        guard currentPhotoIndex < photos.count - 1 else {
+            showSwipeMessage("Это последнее изображение")
+            return
+        }
+        
+        currentPhotoIndex += 1
+        let nextPhoto = photos[currentPhotoIndex]
+        updatePhotoDisplay(nextPhoto)
+        showSwipeMessage("Следующее фото")
+    }
+    
+    private func navigateToPreviousPhoto() {
+        guard currentPhotoIndex > 0 else {
+            showSwipeMessage("Это первое изображение")
+            return
+        }
+        
+        currentPhotoIndex -= 1
+        let previousPhoto = photos[currentPhotoIndex]
+        updatePhotoDisplay(previousPhoto)
+        showSwipeMessage("Предыдущее фото")
+    }
+    
+    private func updatePhotoDisplay(_ newPhoto: Photo) {
+        // Создаем новый presenter для нового изображения
+        presenter = PhotoDetailPresenter(photo: newPhoto)
+        presenter.view = self
+        
+        // Обновляем информацию об изображении
+        authorLabel.text = newPhoto.user.name
+        descriptionLabel.text = newPhoto.description ?? newPhoto.altDescription ?? "Описание отсутствует"
+        
+        // Обновляем кнопку избранного
+        favoriteButton.isSelected = presenter.isFavorite(newPhoto)
+        
+        // Загружаем новое изображение
+        loadingIndicator.startAnimating()
+        imageView.image = nil
+        
+        ImageCacheService.shared.loadImage(from: newPhoto.urls.regular) { [weak self] image in
+            DispatchQueue.main.async {
+                self?.loadingIndicator.stopAnimating()
+                self?.imageView.image = image
+            }
+        }
+    }
+    
+    private func showSwipeMessage(_ message: String) {
+        // Создаем временную метку для демонстрации свайпов
+        let messageLabel = UILabel()
+        messageLabel.text = message
+        messageLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        messageLabel.textColor = .white
+        messageLabel.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        messageLabel.textAlignment = .center
+        messageLabel.layer.cornerRadius = 8
+        messageLabel.clipsToBounds = true
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.numberOfLines = 0 // Разрешаем многострочный текст
+        messageLabel.lineBreakMode = .byWordWrapping
+        
+        view.addSubview(messageLabel)
+        
+        // Рассчитываем размер текста для правильной ширины
+        let maxWidth: CGFloat = 250
+        let textSize = message.size(withAttributes: [.font: messageLabel.font!])
+        let labelWidth = min(textSize.width + 20, maxWidth) // Добавляем отступы
+        
+        NSLayoutConstraint.activate([
+            messageLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            messageLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            messageLabel.widthAnchor.constraint(equalToConstant: labelWidth),
+            messageLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 40)
+        ])
+        
+        // Анимация появления и исчезновения
+        messageLabel.alpha = 0
+        UIView.animate(withDuration: 0.3, animations: {
+            messageLabel.alpha = 1
+        }) { _ in
+            UIView.animate(withDuration: 0.3, delay: 1.0, animations: {
+                messageLabel.alpha = 0
+            }) { _ in
+                messageLabel.removeFromSuperview()
+            }
+        }
     }
     
     private func showAnimatedHeart() {

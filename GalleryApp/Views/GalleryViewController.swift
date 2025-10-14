@@ -134,7 +134,7 @@ extension GalleryViewController: UICollectionViewDataSource {
 extension GalleryViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let photo = photos[indexPath.item]
-        let detailVC = PhotoDetailViewController(photo: photo)
+        let detailVC = PhotoDetailViewController(photo: photo, photos: photos, currentIndex: indexPath.item)
         navigationController?.pushViewController(detailVC, animated: true)
     }
     
