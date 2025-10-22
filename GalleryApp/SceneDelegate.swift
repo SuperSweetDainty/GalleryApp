@@ -1,7 +1,7 @@
 import UIKit
 
-class SceneDelegate: UIResponder, UIWindowSceneDelegate {
-
+final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    
     var window: UIWindow?
 
 
@@ -29,9 +29,36 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window?.makeKeyAndVisible()
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let galleryViewController = GalleryViewController()
-            let navigationController = UINavigationController(rootViewController: galleryViewController)
-            self.window?.rootViewController = navigationController
+            let favoritesService = FavoritesService()
+            let imageCacheService = ImageCacheService()
+            
+            let galleryViewController = GalleryViewController(
+                favoritesService: favoritesService,
+                imageCacheService: imageCacheService
+            )
+            galleryViewController.tabBarItem = UITabBarItem(
+                title: "Галерея",
+                image: UIImage(systemName: "photo.on.rectangle"),
+                selectedImage: UIImage(systemName: "photo.on.rectangle.fill")
+            )
+            let galleryNav = UINavigationController(rootViewController: galleryViewController)
+            
+            let favoritesViewController = FavoritesViewController(
+                favoritesService: favoritesService,
+                imageCacheService: imageCacheService
+            )
+            favoritesViewController.tabBarItem = UITabBarItem(
+                title: "Избранное",
+                image: UIImage(systemName: "heart"),
+                selectedImage: UIImage(systemName: "heart.fill")
+            )
+            let favoritesNav = UINavigationController(rootViewController: favoritesViewController)
+            
+            let tabBarController = UITabBarController()
+            tabBarController.viewControllers = [galleryNav, favoritesNav]
+            tabBarController.tabBar.tintColor = .systemRed
+            
+            self.window?.rootViewController = tabBarController
         }
     }
 

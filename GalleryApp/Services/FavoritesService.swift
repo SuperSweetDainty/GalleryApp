@@ -1,67 +1,62 @@
 import Foundation
 
-protocol FavoritesServiceProtocol {
+extension Notification.Name {
+    static let favoritesDidChange = Notification.Name("favoritesDidChange")
+}
+
+protocol FavoritesServiceProtocol: AnyObject {
     func addToFavorites(_ photo: Photo)
     func removeFromFavorites(_ photo: Photo)
     func isFavorite(_ photo: Photo) -> Bool
-    func getAllFavorites() -> [Photo]
-    func saveFavorites()
-    func loadFavorites()
+    func getFavoriteIds() -> Set<String>
 }
 
-class FavoritesService: FavoritesServiceProtocol {
-    static let shared = FavoritesService()
-    
+final class FavoritesService: FavoritesServiceProtocol {
     private var favorites: Set<String> = []
     private let favoritesKey = "favorite_photos"
-    private let userDefaults = UserDefaults.standard
-    private var favoritePhotos: [Photo] = []
+    private let userDefaults: UserDefaults
     
-    private init() {
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
         loadFavorites()
     }
     
     func addToFavorites(_ photo: Photo) {
         favorites.insert(photo.id)
-        if !favoritePhotos.contains(where: { $0.id == photo.id }) {
-            favoritePhotos.append(photo)
-        }
         saveFavorites()
+        NotificationCenter.default.post(
+            name: .favoritesDidChange,
+            object: nil,
+            userInfo: ["photoId": photo.id, "isFavorite": true]
+        )
     }
     
     func removeFromFavorites(_ photo: Photo) {
         favorites.remove(photo.id)
-        favoritePhotos.removeAll { $0.id == photo.id }
         saveFavorites()
+        NotificationCenter.default.post(
+            name: .favoritesDidChange,
+            object: nil,
+            userInfo: ["photoId": photo.id, "isFavorite": false]
+        )
     }
     
     func isFavorite(_ photo: Photo) -> Bool {
         return favorites.contains(photo.id)
     }
     
-    func getAllFavorites() -> [Photo] {
-        return favoritePhotos
+    func getFavoriteIds() -> Set<String> {
+        return favorites
     }
     
-    func saveFavorites() {
+    private func saveFavorites() {
         let favoriteIds = Array(favorites)
         userDefaults.set(favoriteIds, forKey: favoritesKey)
-        
-        // Сохраняем полные данные фотографий
-        if let encoded = try? JSONEncoder().encode(favoritePhotos) {
-            userDefaults.set(encoded, forKey: "\(favoritesKey)_data")
-        }
     }
     
-    func loadFavorites() {
+    private func loadFavorites() {
         if let favoriteIds = userDefaults.array(forKey: favoritesKey) as? [String] {
             favorites = Set(favoriteIds)
-        }
-        
-        // Загружаем полные данные фотографий
-        if let data = userDefaults.data(forKey: "\(favoritesKey)_data"),
-           let photos = try? JSONDecoder().decode([Photo].self, from: data) {
-            favoritePhotos = photos
         }
     }
 }
