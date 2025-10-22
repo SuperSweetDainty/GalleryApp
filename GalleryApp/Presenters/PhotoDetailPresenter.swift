@@ -1,42 +1,46 @@
 import Foundation
-import UIKit
 
 protocol PhotoDetailViewProtocol: AnyObject {
     func displayPhoto(_ photo: Photo)
     func showError(_ error: Error)
     func updateFavoriteButton(isFavorite: Bool)
-    func showLoading(_ isLoading: Bool)
 }
 
-protocol PhotoDetailPresenterProtocol {
+protocol PhotoDetailPresenterProtocol: AnyObject {
     var view: PhotoDetailViewProtocol? { get set }
     func loadPhoto()
     func toggleFavorite()
-    func getCurrentPhoto() -> Photo?
+    func getCurrentPhoto() -> Photo
     func isFavorite(_ photo: Photo) -> Bool
+    func canNavigateToNext() -> Bool
+    func canNavigateToPrevious() -> Bool
+    func navigateToNext()
+    func navigateToPrevious()
 }
 
-class PhotoDetailPresenter: PhotoDetailPresenterProtocol {
+final class PhotoDetailPresenter: PhotoDetailPresenterProtocol {
     weak var view: PhotoDetailViewProtocol?
     
     private let favoritesService: FavoritesServiceProtocol
-    private let imageCacheService: ImageCacheServiceProtocol
-    private var photo: Photo
+    private let photos: [Photo]
+    private var currentIndex: Int
     
-    init(photo: Photo,
-         favoritesService: FavoritesServiceProtocol = FavoritesService.shared,
-         imageCacheService: ImageCacheServiceProtocol = ImageCacheService.shared) {
-        self.photo = photo
+    init(photos: [Photo],
+         currentIndex: Int,
+         favoritesService: FavoritesServiceProtocol) {
+        self.photos = photos
+        self.currentIndex = currentIndex
         self.favoritesService = favoritesService
-        self.imageCacheService = imageCacheService
     }
     
     func loadPhoto() {
+        let photo = photos[currentIndex]
         view?.displayPhoto(photo)
         view?.updateFavoriteButton(isFavorite: favoritesService.isFavorite(photo))
     }
     
     func toggleFavorite() {
+        let photo = photos[currentIndex]
         if favoritesService.isFavorite(photo) {
             favoritesService.removeFromFavorites(photo)
         } else {
@@ -46,11 +50,31 @@ class PhotoDetailPresenter: PhotoDetailPresenterProtocol {
         view?.updateFavoriteButton(isFavorite: favoritesService.isFavorite(photo))
     }
     
-    func getCurrentPhoto() -> Photo? {
-        return photo
+    func getCurrentPhoto() -> Photo {
+        return photos[currentIndex]
     }
     
     func isFavorite(_ photo: Photo) -> Bool {
         return favoritesService.isFavorite(photo)
+    }
+    
+    func canNavigateToNext() -> Bool {
+        return currentIndex < photos.count - 1
+    }
+    
+    func canNavigateToPrevious() -> Bool {
+        return currentIndex > 0
+    }
+    
+    func navigateToNext() {
+        guard canNavigateToNext() else { return }
+        currentIndex += 1
+        loadPhoto()
+    }
+    
+    func navigateToPrevious() {
+        guard canNavigateToPrevious() else { return }
+        currentIndex -= 1
+        loadPhoto()
     }
 }

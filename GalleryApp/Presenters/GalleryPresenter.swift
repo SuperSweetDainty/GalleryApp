@@ -1,14 +1,12 @@
 import Foundation
-import UIKit
 
 protocol GalleryViewProtocol: AnyObject {
     func displayPhotos(_ photos: [Photo])
     func showError(_ error: Error)
     func showLoading(_ isLoading: Bool)
-    func updateFavoriteStatus(for photo: Photo)
 }
 
-protocol GalleryPresenterProtocol {
+protocol GalleryPresenterProtocol: AnyObject {
     var view: GalleryViewProtocol? { get set }
     func loadPhotos()
     func loadMorePhotos()
@@ -16,24 +14,21 @@ protocol GalleryPresenterProtocol {
     func isFavorite(_ photo: Photo) -> Bool
 }
 
-class GalleryPresenter: GalleryPresenterProtocol {
+final class GalleryPresenter: GalleryPresenterProtocol {
     weak var view: GalleryViewProtocol?
     
     private let networkService: NetworkServiceProtocol
     private let favoritesService: FavoritesServiceProtocol
-    private let imageCacheService: ImageCacheServiceProtocol
     
     private var currentPage = 1
     private var isLoading = false
     private var hasMorePages = true
     private var allPhotos: [Photo] = []
     
-    init(networkService: NetworkServiceProtocol = NetworkService(),
-         favoritesService: FavoritesServiceProtocol = FavoritesService.shared,
-         imageCacheService: ImageCacheServiceProtocol = ImageCacheService.shared) {
+    init(networkService: NetworkServiceProtocol,
+         favoritesService: FavoritesServiceProtocol) {
         self.networkService = networkService
         self.favoritesService = favoritesService
-        self.imageCacheService = imageCacheService
     }
     
     func loadPhotos() {
@@ -86,8 +81,6 @@ class GalleryPresenter: GalleryPresenterProtocol {
         } else {
             favoritesService.addToFavorites(photo)
         }
-        
-        view?.updateFavoriteStatus(for: photo)
     }
     
     func isFavorite(_ photo: Photo) -> Bool {

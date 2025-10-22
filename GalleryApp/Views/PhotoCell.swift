@@ -4,7 +4,7 @@ protocol PhotoCellDelegate: AnyObject {
     func photoCell(_ cell: PhotoCell, didTapFavoriteButton photo: Photo)
 }
 
-class PhotoCell: UICollectionViewCell {
+final class PhotoCell: UICollectionViewCell {
     static let identifier = "PhotoCell"
     
     // MARK: - UI Elements
@@ -37,6 +37,7 @@ class PhotoCell: UICollectionViewCell {
     // MARK: - Properties
     var photo: Photo?
     weak var delegate: PhotoCellDelegate?
+    private var imageCacheService: ImageCacheServiceProtocol?
     
     // MARK: - Initialization
     override init(frame: CGRect) {
@@ -73,19 +74,20 @@ class PhotoCell: UICollectionViewCell {
     }
     
     // MARK: - Configuration
-    func configure(with photo: Photo, isFavorite: Bool) {
+    func configure(with photo: Photo, isFavorite: Bool, imageCacheService: ImageCacheServiceProtocol) {
         self.photo = photo
+        self.imageCacheService = imageCacheService
         favoriteButton.isSelected = isFavorite
         
         loadImage()
     }
     
     private func loadImage() {
-        guard let photo = photo else { return }
+        guard let photo = photo, let imageCacheService = imageCacheService else { return }
         
         loadingIndicator.startAnimating()
         
-        ImageCacheService.shared.loadImage(from: photo.urls.small) { [weak self] image in
+        imageCacheService.loadImage(from: photo.urls.small) { [weak self] image in
             DispatchQueue.main.async {
                 self?.loadingIndicator.stopAnimating()
                 self?.imageView.image = image

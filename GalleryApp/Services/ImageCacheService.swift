@@ -1,25 +1,22 @@
 import UIKit
 
-protocol ImageCacheServiceProtocol {
+protocol ImageCacheServiceProtocol: AnyObject {
     func loadImage(from url: String, completion: @escaping (UIImage?) -> Void)
-    func clearCache()
 }
 
-class ImageCacheService: ImageCacheServiceProtocol {
-    static let shared = ImageCacheService()
-    
+final class ImageCacheService: ImageCacheServiceProtocol {
     private let cache = NSCache<NSString, UIImage>()
-    private let session = URLSession.shared
+    private let session: URLSession
     
-    private init() {
+    init(session: URLSession = .shared) {
+        self.session = session
         cache.countLimit = 100
-        cache.totalCostLimit = 50 * 1024 * 1024 // 50 MB
+        cache.totalCostLimit = 50 * 1024 * 1024
     }
     
     func loadImage(from url: String, completion: @escaping (UIImage?) -> Void) {
         let cacheKey = NSString(string: url)
         
-        // Проверяем кэш
         if let cachedImage = cache.object(forKey: cacheKey) {
             completion(cachedImage)
             return
@@ -39,14 +36,9 @@ class ImageCacheService: ImageCacheServiceProtocol {
                     return
                 }
                 
-                // Сохраняем в кэш
                 self?.cache.setObject(image, forKey: cacheKey)
                 completion(image)
             }
         }.resume()
-    }
-    
-    func clearCache() {
-        cache.removeAllObjects()
     }
 }

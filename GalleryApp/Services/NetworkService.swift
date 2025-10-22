@@ -1,10 +1,10 @@
 import Foundation
 
-protocol NetworkServiceProtocol {
+protocol NetworkServiceProtocol: AnyObject {
     func fetchPhotos(page: Int, completion: @escaping (Result<PhotoResponse, Error>) -> Void)
 }
 
-class NetworkService: NetworkServiceProtocol {
+final class NetworkService: NetworkServiceProtocol {
     private let baseURL = "https://api.unsplash.com"
     private let accessKey = "YOUR_UNSPLASH_ACCESS_KEY"
     

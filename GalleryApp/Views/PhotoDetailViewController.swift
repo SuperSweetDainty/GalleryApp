@@ -1,6 +1,6 @@
 import UIKit
 
-class PhotoDetailViewController: UIViewController {
+final class PhotoDetailViewController: UIViewController {
     
     // MARK: - Enums
     private enum AnimationDirection {
@@ -9,10 +9,7 @@ class PhotoDetailViewController: UIViewController {
     
     // MARK: - Properties
     private var presenter: PhotoDetailPresenterProtocol!
-    private let photo: Photo
-    private let photos: [Photo]
-    private let currentIndex: Int
-    private var currentPhotoIndex: Int
+    private let imageCacheService: ImageCacheServiceProtocol
     
     // MARK: - UI Elements
     private lazy var mainScrollView: UIScrollView = {
@@ -54,8 +51,9 @@ class PhotoDetailViewController: UIViewController {
     private lazy var favoriteButton: UIButton = {
         let button = UIButton(type: .custom)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(UIImage(named: "Dislike"), for: .normal)
-        button.setImage(UIImage(named: "Like"), for: .selected)
+        button.setImage(UIImage(systemName: "heart"), for: .normal)
+        button.setImage(UIImage(systemName: "heart.fill"), for: .selected)
+        button.tintColor = .systemRed
         button.addTarget(self, action: #selector(favoriteButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -103,12 +101,19 @@ class PhotoDetailViewController: UIViewController {
     }()
     
     // MARK: - Initialization
-    init(photo: Photo, photos: [Photo], currentIndex: Int) {
-        self.photo = photo
-        self.photos = photos
-        self.currentIndex = currentIndex
-        self.currentPhotoIndex = currentIndex
+    init(photos: [Photo],
+         currentIndex: Int,
+         favoritesService: FavoritesServiceProtocol,
+         imageCacheService: ImageCacheServiceProtocol) {
+        self.imageCacheService = imageCacheService
         super.init(nibName: nil, bundle: nil)
+        
+        self.presenter = PhotoDetailPresenter(
+            photos: photos,
+            currentIndex: currentIndex,
+            favoritesService: favoritesService
+        )
+        self.presenter.view = self
     }
     
     required init?(coder: NSCoder) {
@@ -120,14 +125,22 @@ class PhotoDetailViewController: UIViewController {
         super.viewDidLoad()
         setupNavigationBar()
         setupUI()
-        setupPresenter()
         presenter.loadPhoto()
+        setupNotifications()
     }
     
-    // MARK: - Setup
-    private func setupPresenter() {
-        presenter = PhotoDetailPresenter(photo: photo)
-        presenter.view = self
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        tabBarController?.tabBar.isHidden = true
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        tabBarController?.tabBar.isHidden = false
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -136,6 +149,29 @@ class PhotoDetailViewController: UIViewController {
         coordinator.animate(alongsideTransition: { _ in
             self.updateImageHeight()
         })
+    }
+    
+    // MARK: - Setup
+    private func setupNotifications() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(favoritesDidChange),
+            name: .favoritesDidChange,
+            object: nil
+        )
+    }
+    
+    @objc private func favoritesDidChange(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let photoId = userInfo["photoId"] as? String,
+              let isFavorite = userInfo["isFavorite"] as? Bool else {
+            return
+        }
+        
+        let currentPhoto = presenter.getCurrentPhoto()
+        if currentPhoto.id == photoId {
+            favoriteButton.isSelected = isFavorite
+        }
     }
     
     private func updateImageHeight() {
@@ -149,7 +185,6 @@ class PhotoDetailViewController: UIViewController {
         view.layoutIfNeeded()
     }
     
-    // MARK: - Setup
     private func setupNavigationBar() {
         title = ""
         navigationController?.navigationBar.tintColor = UIColor(resource: .black)
@@ -240,7 +275,6 @@ class PhotoDetailViewController: UIViewController {
         ])
     }
     
-    
     // MARK: - Actions
     @objc private func favoriteButtonTapped() {
         presenter.toggleFavorite()
@@ -263,66 +297,34 @@ class PhotoDetailViewController: UIViewController {
     }
     
     private func navigateToNextPhoto() {
-        guard currentPhotoIndex < photos.count - 1 else {
+        guard presenter.canNavigateToNext() else {
             showSwipeMessage("Это последнее изображение")
             return
         }
         
-        currentPhotoIndex += 1
-        let nextPhoto = photos[currentPhotoIndex]
-        animateToPhoto(nextPhoto, direction: .left)
+        animateNavigation(direction: .left) {
+            self.presenter.navigateToNext()
+        }
     }
     
     private func navigateToPreviousPhoto() {
-        guard currentPhotoIndex > 0 else {
+        guard presenter.canNavigateToPrevious() else {
             showSwipeMessage("Это первое изображение")
             return
         }
         
-        currentPhotoIndex -= 1
-        let previousPhoto = photos[currentPhotoIndex]
-        animateToPhoto(previousPhoto, direction: .right)
-    }
-    
-    private func updatePhotoDisplay(_ newPhoto: Photo) {
-        presenter = PhotoDetailPresenter(photo: newPhoto)
-        presenter.view = self
-        
-        authorLabel.text = newPhoto.user.name
-        descriptionLabel.text = newPhoto.description ?? newPhoto.altDescription ?? "Описание отсутствует"
-        
-        favoriteButton.isSelected = presenter.isFavorite(newPhoto)
-        
-        loadingIndicator.startAnimating()
-        imageView.image = nil
-        
-        ImageCacheService.shared.loadImage(from: newPhoto.urls.regular) { [weak self] image in
-            DispatchQueue.main.async {
-                self?.loadingIndicator.stopAnimating()
-                self?.imageView.image = image
-            }
+        animateNavigation(direction: .right) {
+            self.presenter.navigateToPrevious()
         }
     }
     
-    private func animateToPhoto(_ newPhoto: Photo, direction: AnimationDirection) {
-        let newPresenter = PhotoDetailPresenter(photo: newPhoto)
-        presenter = newPresenter
-        presenter.view = self
-        
-        authorLabel.text = newPhoto.user.name
-        descriptionLabel.text = newPhoto.description ?? newPhoto.altDescription ?? "Описание отсутствует"
-        
-        favoriteButton.isSelected = presenter.isFavorite(newPhoto)
-        
-        let transform: CGAffineTransform
+    private func animateNavigation(direction: AnimationDirection, completion: @escaping () -> Void) {
         let nextTransform: CGAffineTransform
         
         switch direction {
         case .left:
-            transform = CGAffineTransform(translationX: -view.frame.width, y: 0)
             nextTransform = CGAffineTransform(translationX: view.frame.width, y: 0)
         case .right:
-            transform = CGAffineTransform(translationX: view.frame.width, y: 0)
             nextTransform = CGAffineTransform(translationX: -view.frame.width, y: 0)
         }
         
@@ -330,27 +332,13 @@ class PhotoDetailViewController: UIViewController {
         authorLabel.transform = nextTransform
         descriptionLabel.transform = nextTransform
         
-        loadingIndicator.startAnimating()
-        imageView.image = nil
-        
-        ImageCacheService.shared.loadImage(from: newPhoto.urls.regular) { [weak self] image in
-            DispatchQueue.main.async {
-                self?.loadingIndicator.stopAnimating()
-                self?.imageView.image = image
-            }
-        }
+        completion()
         
         UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut, animations: {
-            self.imageView.transform = transform
-            self.authorLabel.transform = transform
-            self.descriptionLabel.transform = transform
-            
             self.imageView.transform = .identity
             self.authorLabel.transform = .identity
             self.descriptionLabel.transform = .identity
-            
-        }) { _ in
-        }
+        })
     }
     
     private func showSwipeMessage(_ message: String) {
@@ -392,7 +380,7 @@ class PhotoDetailViewController: UIViewController {
     }
     
     private func showAnimatedHeart() {
-        guard let currentPhoto = presenter.getCurrentPhoto() else { return }
+        let currentPhoto = presenter.getCurrentPhoto()
         let isFavorite = presenter.isFavorite(currentPhoto)
         animatedHeartImageView.image = UIImage(systemName: isFavorite ? "heart.fill" : "heart")
         
@@ -432,7 +420,7 @@ class PhotoDetailViewController: UIViewController {
         
         let baseHeight = screenHeight * baseHeightPercentage
         
-        let photo = self.photo
+        let photo = presenter.getCurrentPhoto()
         let aspectRatio = CGFloat(photo.width) / CGFloat(photo.height)
         let heightBasedOnWidth = availableWidth / aspectRatio
         
@@ -448,8 +436,9 @@ extension PhotoDetailViewController: PhotoDetailViewProtocol {
         descriptionLabel.text = photo.description ?? photo.altDescription ?? "Описание отсутствует"
         
         loadingIndicator.startAnimating()
+        imageView.image = nil
         
-        ImageCacheService.shared.loadImage(from: photo.urls.regular) { [weak self] image in
+        imageCacheService.loadImage(from: photo.urls.regular) { [weak self] image in
             DispatchQueue.main.async {
                 self?.loadingIndicator.stopAnimating()
                 self?.imageView.image = image
@@ -465,14 +454,6 @@ extension PhotoDetailViewController: PhotoDetailViewProtocol {
     
     func updateFavoriteButton(isFavorite: Bool) {
         favoriteButton.isSelected = isFavorite
-    }
-    
-    func showLoading(_ isLoading: Bool) {
-        if isLoading {
-            loadingIndicator.startAnimating()
-        } else {
-            loadingIndicator.stopAnimating()
-        }
     }
 }
 
